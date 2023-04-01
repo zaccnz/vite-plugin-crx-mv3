@@ -412,7 +412,7 @@ var ManifestProcessor = class {
   getHtmlPaths() {
     var _a, _b, _c;
     const manifest = this.manifest;
-    const a = [
+    return [
       (_a = manifest.action) == null ? void 0 : _a.default_popup,
       Object.values(manifest.chrome_url_overrides ?? {}),
       manifest.devtools_page,
@@ -421,8 +421,6 @@ var ManifestProcessor = class {
       (_c = manifest.sandbox) == null ? void 0 : _c.pages,
       ...(manifest.web_accessible_resources ?? []).map((resource) => resource.resources).flat().filter((resource) => resource.endsWith(".html"))
     ].flat().filter((x) => isString(x)).map((p) => (0, import_path6.resolve)(this.srcDir, p));
-    console.log(a);
-    return a;
   }
   getContentScriptPaths() {
     let paths = [];

@@ -19,13 +19,13 @@ export interface ChromeExtensionManifest {
    */
   action?: {
     default_icon?:
-      | {
-          '16'?: string
-          '24'?: string
-          '32'?: string
-        }
-      | string
-      | undefined
+    | {
+      '16'?: string
+      '24'?: string
+      '32'?: string
+    }
+    | string
+    | undefined
     default_title?: string
     default_popup?: string
   }
@@ -359,7 +359,8 @@ export interface Background {
   /**
    * Specify the service worker of the background page.
    */
-  service_worker: string | undefined
+  service_worker: string | undefined,
+  type: 'module' | undefined,
 }
 export interface ChromeSettingsOverrides {
   homepage?: Icon

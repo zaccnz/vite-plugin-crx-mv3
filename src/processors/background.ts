@@ -7,9 +7,9 @@ import {
 import { emitAsset } from './asset'
 
 const dynamicImportAssetRex =
-  /(?<=chrome.scripting.(insertCSS|removeCSS)\()[\s\S]*?(?=\))/gm
+  /(?<=(chrome|browser|Browser).scripting.(insertCSS|removeCSS)\()[\s\S]*?(?=\))/gm
 const dynamicImportScriptRex =
-  /(?<=chrome.scripting.executeScript\()[\s\S]*?(?=\))/gm
+  /(?<=(chrome|browser|Browser).scripting.executeScript\()[\s\S]*?(?=\))/gm
 
 export async function generageDynamicImportScript(
   context: PluginContext,

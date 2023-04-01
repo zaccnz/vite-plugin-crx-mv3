@@ -47,7 +47,7 @@ export class ManifestProcessor {
     )
     try {
       this.packageJsonPath = normalizePath(join(process.cwd(), 'package.json'))
-    } catch (error) {}
+    } catch (error) { }
     this.watchPackageJson(this.packageJsonPath)
     this.loadManifest(manifestAbsolutPath)
   }
@@ -161,7 +161,11 @@ export class ManifestProcessor {
       manifest.devtools_page,
       manifest.options_page,
       manifest.options_ui?.page,
-      manifest.sandbox?.pages
+      manifest.sandbox?.pages,
+      ...(manifest.web_accessible_resources ?? [])
+        .map(resource => resource.resources)
+        .flat()
+        .filter(resource => resource.endsWith('.html'))
     ]
       .flat()
       .filter((x) => isString(x))
@@ -208,6 +212,22 @@ export class ManifestProcessor {
 
   public async generateDevScript(context, port) {
     this.manifest = await contentScriptsParse.emitDevScript(context, port, this)
+  }
+
+  private fixManifestPath(path: string): string {
+    const manifestDir = normalizePathResolve(
+      this.options.viteConfig.root,
+      dirname(this.options.manifestPath)
+    );
+    const fileDir = normalizePathResolve(manifestDir, path);
+
+    try {
+      // path relative to root
+      const [_, path] = fileDir.split(this.options.viteConfig.root + '/');
+      return path;
+    } catch {
+      return basename(path);
+    }
   }
 
   //generate manifest.json
@@ -258,24 +278,25 @@ export class ManifestProcessor {
     }
     if (this.serviceWorkerAbsolutePath) {
       manifest.background = {
-        service_worker: bundleMap[this.serviceWorkerAbsolutePath].fileName
+        ...manifest.background,
+        service_worker: bundleMap[this.serviceWorkerAbsolutePath].fileName,
       }
     }
     if (manifest.action?.default_popup) {
-      manifest.action.default_popup = basename(manifest.action.default_popup)
+      manifest.action.default_popup = this.fixManifestPath(manifest.action.default_popup)
     }
     if (manifest.devtools_page) {
-      manifest.devtools_page = basename(manifest.devtools_page)
+      manifest.devtools_page = this.fixManifestPath(manifest.devtools_page)
     }
     if (manifest.options_page) {
-      manifest.options_page = basename(manifest.options_page)
+      manifest.options_page = this.fixManifestPath(manifest.options_page)
     }
     if (manifest.options_ui?.page) {
-      manifest.options_ui.page = basename(manifest.options_ui.page)
+      manifest.options_ui.page = this.fixManifestPath(manifest.options_ui.page)
     }
     if (manifest.sandbox?.pages) {
       manifest.sandbox.pages = manifest.sandbox.pages.map((page) =>
-        basename(page)
+        this.fixManifestPath(page)
       )
     }
     for (const key of Object.keys(manifest.chrome_url_overrides || {})) {

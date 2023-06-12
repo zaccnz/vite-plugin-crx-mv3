@@ -41,7 +41,8 @@ export async function generageDynamicImportScript(
 export async function emitDevScript(
   context: PluginContext,
   port: number,
-  manifestContext
+  manifestContext,
+  reloadPage: boolean
 ): Promise<Record<string, any>> {
   let viteConfig = manifestContext.options.viteConfig
   let manifest = manifestContext.manifest
@@ -52,7 +53,7 @@ export async function emitDevScript(
   if (!serviceWorkerPath && contentScripts?.length) {
     let backgroundPath = normalizePathResolve(__dirname, 'client/background.js')
     let content = await getContentFromCache(
-      context,
+      context.cache,
       backgroundPath,
       readFile(backgroundPath, 'utf8')
     )
@@ -65,17 +66,17 @@ export async function emitDevScript(
       fileName: SERVICE_WORK_DEV_PATH
     })
   }
-  if (!manifestContext.manifest.content_scripts) {
+  if (!contentScripts) {
     manifest.content_scripts = []
   }
   if (serviceWorkerPath || contentScripts?.length) {
-    let code = `var PORT=${port},MENIFEST_NAME='${manifest.name}';`
+    let code = `var PORT=${port},MENIFEST_NAME='${manifest.name}',RELOADPAGE=${reloadPage};`
     let contentScriptDevPath = normalizePathResolve(
       __dirname,
       'client/content.js'
     )
     let content = await getContentFromCache(
-      context,
+      context.cache,
       contentScriptDevPath,
       readFile(contentScriptDevPath, 'utf8')
     )

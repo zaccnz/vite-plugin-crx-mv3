@@ -18,10 +18,11 @@ import { VITE_PLUGIN_CRX_MV3, UPDATE_CONTENT, stubId } from './constants'
 interface Options {
   port?: number
   manifest: string
+  reloadPage?: boolean
 }
 
 export default function crxMV3(options: Partial<Options> = {}): Plugin {
-  let { port = 8181, manifest = '' } = options
+  let { port = 8181, manifest = '', reloadPage = true } = options
 
   if (
     !manifest ||
@@ -34,12 +35,12 @@ export default function crxMV3(options: Partial<Options> = {}): Plugin {
   }
 
   let socket
-  let changedFilePath = ''
+  let changedFilePath: string
   let manifestAbsolutPath: string
   let manifestProcessor: Processor
-  let srcDir = dirname(manifest)
+  let srcDir: string = dirname(manifest)
   let config: ResolvedConfig
-  let popupAbsolutePath = ''
+  let popupAbsolutePath: string
   let popupMoudles: string[] = []
 
   async function websocketServerStart(manifest) {
@@ -143,7 +144,7 @@ export default function crxMV3(options: Partial<Options> = {}): Plugin {
     },
     async buildStart() {
       this.addWatchFile(manifestAbsolutPath)
-      await manifestProcessor.generateDevScript(this, port)
+      await manifestProcessor.generateDevScript(this, port, reloadPage)
       await manifestProcessor.generateAsset(this)
     },
     transform(code, id) {

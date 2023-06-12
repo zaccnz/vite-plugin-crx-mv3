@@ -91,13 +91,13 @@ async function emitFile(path, content) {
     console.log(error);
   }
 }
-async function getContentFromCache(context, id, getContentAsyncFun) {
+async function getContentFromCache(cache, id, getContentAsyncFun) {
   let content;
-  if (!context.cache.has(id)) {
+  if (!cache.has(id)) {
     content = await getContentAsyncFun;
-    context.cache.set(id, content);
+    cache.set(id, content);
   } else {
-    content = context.cache.get(id);
+    content = cache.get(id);
   }
   return content;
 }
@@ -169,7 +169,7 @@ async function emitAsset(context, originalPath, fullPath) {
     await compileSass(context, originalPath, fullPath);
   } else {
     let content = await getContentFromCache(
-      context,
+      context.cache,
       fullPath,
       (0, import_promises2.readFile)(fullPath)
     );
@@ -241,7 +241,7 @@ async function generageDynamicImportScript2(context, manifestContext, code) {
   }
   return content;
 }
-async function emitDevScript(context, port, manifestContext) {
+async function emitDevScript(context, port, manifestContext, reloadPage) {
   let viteConfig = manifestContext.options.viteConfig;
   let manifest = manifestContext.manifest;
   let serviceWorkerPath = manifestContext.serviceWorkerAbsolutePath;
@@ -251,7 +251,7 @@ async function emitDevScript(context, port, manifestContext) {
   if (!serviceWorkerPath && (contentScripts == null ? void 0 : contentScripts.length)) {
     let backgroundPath = normalizePathResolve(__dirname, "client/background.js");
     let content = await getContentFromCache(
-      context,
+      context.cache,
       backgroundPath,
       (0, import_promises3.readFile)(backgroundPath, "utf8")
     );
@@ -264,17 +264,17 @@ async function emitDevScript(context, port, manifestContext) {
       fileName: SERVICE_WORK_DEV_PATH
     });
   }
-  if (!manifestContext.manifest.content_scripts) {
+  if (!contentScripts) {
     manifest.content_scripts = [];
   }
   if (serviceWorkerPath || (contentScripts == null ? void 0 : contentScripts.length)) {
-    let code = `var PORT=${port},MENIFEST_NAME='${manifest.name}';`;
+    let code = `var PORT=${port},MENIFEST_NAME='${manifest.name}',RELOADPAGE=${reloadPage};`;
     let contentScriptDevPath = normalizePathResolve(
       __dirname,
       "client/content.js"
     );
     let content = await getContentFromCache(
-      context,
+      context.cache,
       contentScriptDevPath,
       (0, import_promises3.readFile)(contentScriptDevPath, "utf8")
     );
@@ -320,7 +320,8 @@ var ManifestProcessor = class {
       this.packageJsonPath = normalizePath((0, import_path6.join)(process.cwd(), "package.json"));
     } catch (error) {
     }
-    this.watchPackageJson(this.packageJsonPath);
+    if (options.viteConfig.build.watch)
+      this.watchPackageJson(this.packageJsonPath);
     this.loadManifest(manifestAbsolutPath);
   }
   watchPackageJson(input) {
@@ -365,14 +366,14 @@ var ManifestProcessor = class {
     let packageJson = {};
     if (this.packageJsonPath) {
       let content = await getContentFromCache(
-        this,
+        this.cache,
         this.packageJsonPath,
         (0, import_promises4.readFile)(this.packageJsonPath, "utf-8")
       );
       packageJson = JSON.parse(content);
     }
     let manifestContent = await getContentFromCache(
-      this,
+      this.cache,
       manifestPath,
       (0, import_promises4.readFile)(manifestPath, "utf8")
     );
@@ -439,7 +440,7 @@ var ManifestProcessor = class {
         "client/background.js"
       );
       let content = await getContentFromCache(
-        context,
+        context.cache,
         backgroundPath,
         (0, import_promises4.readFile)(backgroundPath, "utf8")
       );
@@ -458,8 +459,13 @@ var ManifestProcessor = class {
     code = await generageDynamicImportAsset(context, this, code);
     return data + code;
   }
-  async generateDevScript(context, port) {
-    this.manifest = await emitDevScript(context, port, this);
+  async generateDevScript(context, port, reloadPage) {
+    this.manifest = await emitDevScript(
+      context,
+      port,
+      this,
+      reloadPage
+    );
   }
   fixManifestPath(path) {
     const manifestDir = normalizePathResolve(
@@ -625,19 +631,19 @@ async function httpServerStart(port) {
 
 // src/index.ts
 function crxMV3(options = {}) {
-  let { port = 8181, manifest = "" } = options;
+  let { port = 8181, manifest = "", reloadPage = true } = options;
   if (!manifest || typeof manifest != "string" || typeof manifest == "string" && !manifest.endsWith("manifest.json")) {
     throw new Error(
       "The manifest parameter is required and the value must be the path to the chrome extension's manifest.json."
     );
   }
   let socket;
-  let changedFilePath = "";
+  let changedFilePath;
   let manifestAbsolutPath;
   let manifestProcessor;
   let srcDir = (0, import_path7.dirname)(manifest);
   let config;
-  let popupAbsolutePath = "";
+  let popupAbsolutePath;
   let popupMoudles = [];
   async function websocketServerStart(manifest2) {
     var _a, _b;
@@ -731,7 +737,7 @@ function crxMV3(options = {}) {
     },
     async buildStart() {
       this.addWatchFile(manifestAbsolutPath);
-      await manifestProcessor.generateDevScript(this, port);
+      await manifestProcessor.generateDevScript(this, port, reloadPage);
       await manifestProcessor.generateAsset(this);
     },
     transform(code, id) {

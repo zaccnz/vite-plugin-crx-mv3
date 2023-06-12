@@ -20,7 +20,12 @@ ws.onmessage = function(e) {
   var _a;
   if (e.data === UPDATE_CONTENT && ((_a = chrome.runtime) == null ? void 0 : _a.id)) {
     chrome.runtime.sendMessage({ msg: RELOAD }, () => {
-      window.location.reload();
+      if (RELOADPAGE)
+        window.location.reload();
+      else
+        console.log(
+          `[${VITE_PLUGIN_CRX_MV3}] extension reload, pls refresh the page manually`
+        );
     });
   }
 };
